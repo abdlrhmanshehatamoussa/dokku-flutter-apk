@@ -49,18 +49,21 @@ runs:
       echo "version_code=$VERSION_CODE" >> $GITHUB_ENV
       echo "version_name=$VERSION_NAME" >> $GITHUB_ENV
     
-  - name: Prepare temp dir
+  - name: Create deploy dir
     run: |
       mkdir -p tmp-dokku-deploy
+      echo "deploy_dir=tmp-dokku-deploy" >> $GITHUB_ENV
+  
+  - name: Prepare deploy directory
       apkfilename=${{env.package}}-${{env.version_name}}-${{env.version_code}}.apk
-      cp ${{ inputs.apk-path }} tmp-dokku-deploy/$apkfilename
-      cd tmp-dokku-deploy
-      curl -L https://raw.githubusercontent.com/abdlrhmanshehatamoussa/dokku-flutter-apk/refs/heads/main/docker-templates/basic/Dockerfile -o Dockerfile
+      cp ${{ inputs.apk-path }} ${{env.deploy_dir}}/$apkfilename
+      curl -L https://raw.githubusercontent.com/abdlrhmanshehatamoussa/dokku-flutter-apk/refs/heads/main/docker-templates/basic/Dockerfile -o ${{env.deploy_dir}}/Dockerfile
+      find ${{env.deploy_dir}}
     shell: bash
 
   - name: Deploy to Dokku
     run: |
-      cd tmp-dokku-deploy
+      cd ${{env.deploy_dir}}
       git init
       git config user.name "github-actions"
       git config user.email "actions@github.com"
