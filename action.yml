@@ -37,13 +37,15 @@ runs:
       chmod 600 ~/.ssh/id_rsa
       ssh-keyscan -H ${{ inputs.dokku-host }} >> ~/.ssh/known_hosts
     shell: bash
-    
+
   - name: Create deploy dir
     run: |
       mkdir -p tmp-dokku-deploy
       echo "deploy_dir=tmp-dokku-deploy" >> $GITHUB_ENV
-  
+    shell: bash
+
   - name: Prepare deploy directory
+    run: |
       cp ${{ inputs.apk-path }} ${{ env.deploy_dir }}/app-release.apk
       cp ${{ inputs.metadata-path }} ${{ env.deploy_dir }}/output-metadata.json
       curl -L https://raw.githubusercontent.com/abdlrhmanshehatamoussa/dokku-flutter-apk/refs/heads/main/docker-templates/basic/Dockerfile -o ${{ env.deploy_dir }}/Dockerfile
