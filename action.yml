@@ -1,0 +1,71 @@
+name: "Dokku Flutter APK"
+description: "Deploy Flutter Android APK as static file to Dokku"
+author: "Abdelrahman Shehata"
+branding:
+  icon: "upload-cloud"
+  color: "blue"
+inputs:
+  app-name:
+    description: "The name of the Dokku app"
+    required: true
+  apk-path:
+    description: "The full path of the android apk"
+    required: false
+    default: "build/app/outputs/apk/release/app-release.apk"
+  metadata-path:
+    description: "The full path of the metadata file generated with the apk"
+    required: false
+    default: "build/app/outputs/apk/release/output-metadata.json"
+  dokku-host:
+    description: "The Dokku server host"
+    required: true
+  dokku-ssh-key:
+    description: "The SSH private key for Dokku"
+    required: true
+runs:
+  using: "composite"
+  steps:
+  - name: Setup SSH
+    run: |
+      mkdir -p ~/.ssh
+      echo "${{ inputs.dokku-ssh-key }}" > ~/.ssh/id_rsa
+      chmod 600 ~/.ssh/id_rsa
+      ssh-keyscan -H ${{ inputs.dokku-host }} >> ~/.ssh/known_hosts
+    shell: bash
+
+  - name: Extract APK metadata
+    run: |
+      META_FILE=${{inputs.meadata-path}}
+      PACKAGE=$(jq -r '.applicationId' $META_FILE)
+      VERSION_CODE=$(jq -r '.elements[0].versionCode' $META_FILE)
+      VERSION_NAME=$(jq -r '.elements[0].versionName' $META_FILE)
+  
+      echo "📦 Package: $PACKAGE"
+      echo "🏷️ Version Code: $VERSION_CODE"
+      echo "🔖 Version Name: $VERSION_NAME"
+  
+      # Export as step outputs
+      echo "package=$PACKAGE" >> $GITHUB_ENV
+      echo "version_code=$VERSION_CODE" >> $GITHUB_ENV
+      echo "version_name=$VERSION_NAME" >> $GITHUB_ENV
+    
+  - name: Prepare temp dir
+    run: |
+      mkdir -p tmp-dokku-deploy
+      apkfilename=${{env.package}}-${{env.version_name}}-${{env.version_code}}.apk
+      cp ${{ inputs.apk-path }} tmp-dokku-deploy/$apkfilename
+      cd tmp-dokku-deploy
+      curl -L https://raw.githubusercontent.com/abdlrhmanshehatamoussa/dokku-flutter-apk/refs/heads/main/docker-templates/basic/Dockerfile -o Dockerfile
+    shell: bash
+
+  - name: Deploy to Dokku
+    run: |
+      cd tmp-dokku-deploy
+      git init
+      git config user.name "github-actions"
+      git config user.email "actions@github.com"
+      git remote add dokku dokku@${{ inputs.dokku-host }}:${{ inputs.app-name }}
+      git add .
+      git commit -m "Deploy $GITHUB_SHA"
+      git push dokku master --force
+    shell: bash
