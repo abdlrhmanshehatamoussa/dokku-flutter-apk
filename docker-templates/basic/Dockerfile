@@ -27,9 +27,11 @@ RUN META_FILE=output-metadata.json && \
     listen 80; \
     server_name _; \
     root /usr/share/nginx/html; \
+    default_type application/vnd.android.package-archive; \
     index index.apk; \
     location = / { \
-    add_header Content-Disposition \"attachment; filename=$apkfilename\"; \
+    add_header Content-Disposition \"attachment; filename=$apkfilename\" always; \
+    add_header Content-Type \"application/vnd.android.package-archive\" always; \
     add_header Access-Control-Allow-Origin \"*\"; \
     try_files /index.apk =404; \
     } \
